@@ -1,6 +1,6 @@
 import { Omniston } from '@ston-fi/omniston-sdk'
 
-export const omniston = new Omniston({ apiUrl: 'https://omni.ston.fi' })
+export const omniston = new Omniston({ apiUrl: 'wss://omni-ws.ston.fi' })
 
 // Token decimals
 export const DECIMALS = {

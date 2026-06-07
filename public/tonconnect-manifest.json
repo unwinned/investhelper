@@ -1,4 +1,5 @@
 {
-  "url": "http://localhost:3000",
-  "name": "InvestHelper"
+  "url": "https://investhelper.com",
+  "name": "InvestHelper",
+  "iconUrl": "https://investhelper.com/icon-192.png"
 }
