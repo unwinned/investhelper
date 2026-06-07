@@ -1,11 +1,11 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useTonConnectUI } from '@tonconnect/ui-react'
 import { CheckCircle2, AlertTriangle, X, Zap, Shield, TrendingUp, Flame, Loader2, ExternalLink, ArrowDownCircle, RefreshCw } from 'lucide-react'
-import { TON_STRATEGIES, POLYGON_STRATEGIES } from '../data.js'
+import { TON_STRATEGIES, POLYGON_STRATEGIES, BASE_STRATEGIES, BNB_STRATEGIES } from '../data.js'
 import { buildTonStrategyTx } from '../lib/tonSigning.js'
-import { checkStrategyApprovals, approveERC20, executePolygonStrategy, executeWithdrawal } from '../lib/evmSigning.js'
-import { ensurePolygon, waitForReceipt } from '../lib/evmUtils.js'
-import { checkPolygonBalances, fmtUSD } from '../lib/balances.js'
+import { checkStrategyApprovals, approveERC20, executePolygonStrategy, executeEVMStrategy, executeEVMWithdrawal } from '../lib/evmSigning.js'
+import { CHAIN_ENSURE, CHAIN_EXPLORER, waitForReceipt } from '../lib/evmUtils.js'
+import { checkEVMBalances, fmtUSD } from '../lib/balances.js'
 import { toNano } from '@ton/core'
 
 const TIER_META = {
@@ -13,6 +13,22 @@ const TIER_META = {
   'Safe':        { icon: TrendingUp, pillClass: 'pill-blue'   },
   'Middle':      { icon: Zap,        pillClass: 'pill-orange' },
   'Alpha Seeker':{ icon: Flame,      pillClass: 'pill-red'    },
+}
+
+const CHAIN_TABS = [
+  { id: 'TON',     label: 'TON Network', color: '#0098ea', bg: 'rgba(0,152,234,0.2)'    },
+  { id: 'Polygon', label: 'Polygon',      color: '#8247e5', bg: 'rgba(130,71,229,0.2)'  },
+  { id: 'Base',    label: 'Base',         color: '#2563eb', bg: 'rgba(37,99,235,0.2)'   },
+  { id: 'BNB',     label: 'BNB Chain',    color: '#f59e0b', bg: 'rgba(245,158,11,0.2)'  },
+]
+
+const CHAIN_NATIVE_LABEL = { Polygon: 'MATIC', Base: 'ETH', BNB: 'BNB' }
+
+const CHAIN_DESCS = {
+  TON:     'Strategies use on-chain contracts: STON.fi v2.1 router · DeDust factory · Tonstakers/Bemo/Hipo pools · Evaa lending. One TON Connect signature per activation.',
+  Polygon: 'Strategies use AAVE v3 pool · QuickSwap v2 router · Balancer vault. Tokens are approved to Multicall3 which pulls, re-approves protocols, and deposits — all in one transaction.',
+  Base:    'Strategies use AAVE v3 on Base · Aerodrome (Velodrome fork) router. Tokens are approved to Multicall3 — all positions deployed in one transaction.',
+  BNB:     'Strategies use AAVE v3 on BNB Chain · PancakeSwap v2 router. Tokens are approved to Multicall3 — all positions deployed in one transaction.',
 }
 
 function RiskDots({ score }) {
@@ -147,7 +163,6 @@ function TonActivateModal({ strategy, wallet, onClose, onActivate }) {
             <div className="py-10 flex flex-col items-center gap-4">
               <Loader2 className="w-8 h-8 text-ton animate-spin" />
               <p className="text-sm text-gray-300">Preparing transaction…</p>
-              <p className="text-xs text-dim">Fetching vault addresses from chain</p>
             </div>
           )}
 
@@ -182,33 +197,33 @@ function TonActivateModal({ strategy, wallet, onClose, onActivate }) {
   )
 }
 
-// ─── Polygon Activate Modal ───────────────────────────────────────────────
-// Steps: confirm → balcheck → insufficient / swappath / approving → ready → signing → done / error / simwarn
+// ─── EVM Activate Modal (Polygon / Base / BNB) ────────────────────────────
 
-function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
-  const [step,            setStep]            = useState('confirm')
-  const [error,           setError]           = useState(null)
-  const [simWarning,      setSimWarning]      = useState(null)
-  const [amount,          setAmount]          = useState('100')
-  const [balResult,       setBalResult]       = useState(null)    // checkPolygonBalances result
-  const [needed,            setNeeded]            = useState([])      // pending approvals
-  const [currentApproval,   setCurrentApproval]   = useState(null)    // label of in-flight approval
-  const [confirmingApproval, setConfirmingApproval] = useState(false)  // waiting for receipt
-  const [swapFromMatic,     setSwapFromMatic]     = useState(false)
+function EvmActivateModal({ strategy, wallet, chain, onClose, onActivate }) {
+  const [step,               setStep]               = useState('confirm')
+  const [error,              setError]              = useState(null)
+  const [simWarning,         setSimWarning]         = useState(null)
+  const [amount,             setAmount]             = useState('100')
+  const [balResult,          setBalResult]          = useState(null)
+  const [needed,             setNeeded]             = useState([])
+  const [currentApproval,    setCurrentApproval]    = useState(null)
+  const [confirmingApproval, setConfirmingApproval] = useState(false)
+  const [swapFromNative,     setSwapFromNative]     = useState(false)
 
-  // Check balances then approvals, pick the right sub-flow
+  const nativeLabel = CHAIN_NATIVE_LABEL[chain] ?? 'native'
+
   const handleCheckAndProceed = useCallback(async () => {
     setStep('balcheck')
     setError(null)
     try {
-      await ensurePolygon()
+      const ensureFn = CHAIN_ENSURE[chain]
+      if (ensureFn) await ensureFn()
       const usdAmount = parseFloat(amount || '0')
-      const result = await checkPolygonBalances(strategy.id, usdAmount, wallet.address)
+      const result = await checkEVMBalances(chain, strategy.id, usdAmount, wallet.address)
       setBalResult(result)
 
       if (!result.sufficient) {
-        // Not enough tokens
-        if (result.canSwapFromNative) {
+        if (result.canSwapFromNative && chain === 'Polygon') {
           setStep('swappath')
         } else {
           setStep('insufficient')
@@ -216,7 +231,6 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
         return
       }
 
-      // Sufficient — check approvals
       const pending = await checkStrategyApprovals(strategy.id, wallet.address)
       setNeeded(pending)
       setStep(pending.length > 0 ? 'approving' : 'ready')
@@ -224,15 +238,13 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
       setError(e?.message ?? 'Balance check failed')
       setStep('error')
     }
-  }, [amount, strategy.id, wallet.address])
+  }, [amount, chain, strategy.id, wallet.address])
 
-  // Run next approval — submit tx, then wait for on-chain confirmation
   const runApproval = useCallback(async (approval) => {
     setCurrentApproval(approval.label)
     setConfirmingApproval(false)
     try {
       const txHash = await approveERC20(approval.token, approval.spender)
-      // Wait for the approval to be mined so simulation sees the allowance
       setConfirmingApproval(true)
       await waitForReceipt(txHash)
       setConfirmingApproval(false)
@@ -249,16 +261,19 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
     }
   }, [])
 
-  // Execute the main strategy tx (token path or swap path)
   const execute = useCallback(async (forceSwap = false) => {
     setStep('signing')
     setError(null)
     setSimWarning(null)
-    const useSwap = forceSwap || swapFromMatic
+    const useSwap = forceSwap || swapFromNative
     try {
-      const usd6     = BigInt(Math.round(parseFloat(amount || '0') * 1e6))
-      const maticWei = balResult ? BigInt(Math.floor(balResult.nativeBalanceUSD / (balResult.nativePrice ?? 0.8) * 0.95 * 1e18)) : 0n
-      await executePolygonStrategy(strategy.id, usd6, wallet.address, useSwap, maticWei)
+      const usd6 = BigInt(Math.round(parseFloat(amount || '0') * 1e6))
+      if (chain === 'Polygon' && useSwap) {
+        const maticWei = balResult ? BigInt(Math.floor(balResult.nativeBalanceUSD / (balResult.nativePrice ?? 0.8) * 0.95 * 1e18)) : 0n
+        await executePolygonStrategy(strategy.id, usd6, wallet.address, true, maticWei)
+      } else {
+        await executeEVMStrategy(chain, strategy.id, usd6, wallet.address)
+      }
       setStep('done')
       setTimeout(() => { onActivate(strategy.id); onClose() }, 1200)
     } catch (e) {
@@ -270,23 +285,21 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
         setStep('error')
       }
     }
-  }, [amount, balResult, swapFromMatic, strategy.id, wallet.address, onActivate, onClose])
+  }, [amount, balResult, chain, swapFromNative, strategy.id, wallet.address, onActivate, onClose])
 
-  // Accept simulation warning and send anyway (skipSimulation=true)
   const proceedDespiteSimulation = useCallback(async () => {
     setStep('signing')
     setError(null)
     try {
-      const usd6     = BigInt(Math.round(parseFloat(amount || '0') * 1e6))
-      const maticWei = balResult ? BigInt(Math.floor(balResult.nativeBalanceUSD / (balResult.nativePrice ?? 0.8) * 0.95 * 1e18)) : 0n
-      await executePolygonStrategy(strategy.id, usd6, wallet.address, swapFromMatic, maticWei, true)
+      const usd6 = BigInt(Math.round(parseFloat(amount || '0') * 1e6))
+      await executeEVMStrategy(chain, strategy.id, usd6, wallet.address, true)
       setStep('done')
       setTimeout(() => { onActivate(strategy.id); onClose() }, 1200)
     } catch (e) {
       setError(e?.message ?? 'Transaction rejected')
       setStep('error')
     }
-  }, [amount, balResult, swapFromMatic, strategy.id, wallet.address, onActivate, onClose])
+  }, [amount, chain, strategy.id, wallet.address, onActivate, onClose])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
@@ -294,14 +307,13 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: '#1e293b' }}>
           <div>
             <h2 className="font-semibold text-white">{strategy.name}</h2>
-            <p className="text-xs text-dim mt-0.5">Polygon · Multicall3 · 1 main signature</p>
+            <p className="text-xs text-dim mt-0.5">{chain} · Multicall3 · 1 main signature</p>
           </div>
           {step !== 'signing' && <button onClick={onClose} className="text-dim hover:text-white"><X className="w-4 h-4" /></button>}
         </div>
 
         <div className="p-5 space-y-4">
 
-          {/* ── Confirm (amount input) ────────────────────── */}
           {step === 'confirm' && (
             <>
               <div className="card-surface p-3 space-y-2 text-sm">
@@ -349,7 +361,6 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
             </>
           )}
 
-          {/* ── Checking balances ────────────────────────── */}
           {step === 'balcheck' && (
             <div className="py-10 flex flex-col items-center gap-4">
               <Loader2 className="w-8 h-8 text-poly animate-spin" />
@@ -358,7 +369,6 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
             </div>
           )}
 
-          {/* ── Insufficient balance, no native swap path ─ */}
           {step === 'insufficient' && balResult && (
             <div className="space-y-4">
               <div className="flex gap-2 p-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
@@ -368,7 +378,6 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
                   <p className="text-dim">You need {fmtUSD(balResult.totalNeededUSD)} worth of strategy tokens.</p>
                 </div>
               </div>
-
               <div className="card-surface p-3 space-y-2 text-xs">
                 <div className="text-dim font-medium mb-2">What you're missing</div>
                 {balResult.missing.map(m => (
@@ -383,31 +392,24 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
                 ))}
                 <div className="border-t mt-2 pt-2" style={{ borderColor: '#1e293b' }}>
                   <div className="flex justify-between">
-                    <span className="text-dim">Your MATIC</span>
+                    <span className="text-dim">Your {nativeLabel}</span>
                     <span className="text-gray-300">{fmtUSD(balResult.nativeBalanceUSD)}</span>
                   </div>
                 </div>
               </div>
-
-              <p className="text-xs text-dim">
-                Your MATIC balance ({fmtUSD(balResult.nativeBalanceUSD)}) isn't enough to cover the full {fmtUSD(balResult.totalNeededUSD)} investment after slippage. Acquire the tokens above and try again.
-              </p>
-
               <button onClick={() => setStep('confirm')} className="btn-outline w-full text-center">Back</button>
             </div>
           )}
 
-          {/* ── Swap from MATIC path ─────────────────────── */}
           {step === 'swappath' && balResult && (
             <div className="space-y-4">
               <div className="flex gap-2 p-3 rounded-lg" style={{ background: 'rgba(130,71,229,0.08)', border: '1px solid rgba(130,71,229,0.3)' }}>
                 <RefreshCw className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#8247e5' }} />
                 <div className="text-xs" style={{ color: '#a78bfa' }}>
                   <p className="font-semibold mb-1">You don't have the required tokens</p>
-                  <p className="text-dim">But you have <span className="text-white font-medium">{fmtUSD(balResult.nativeBalanceUSD)}</span> in MATIC — enough to swap and invest in one transaction.</p>
+                  <p className="text-dim">But you have <span className="text-white font-medium">{fmtUSD(balResult.nativeBalanceUSD)}</span> in {nativeLabel} — enough to swap and invest in one transaction.</p>
                 </div>
               </div>
-
               <div className="card-surface p-3 space-y-2 text-xs">
                 <div className="text-dim font-medium mb-2">Missing tokens</div>
                 {balResult.missing.map(m => (
@@ -417,30 +419,19 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
                   </div>
                 ))}
               </div>
-
-              <div className="card-surface p-3 text-xs space-y-2">
-                <div className="text-dim font-medium">What happens in one tx</div>
-                <ol className="space-y-1 text-dim list-decimal list-inside">
-                  <li>QuickSwap converts your MATIC to the required tokens</li>
-                  <li>Tokens are deposited directly into strategy protocols</li>
-                  <li>aTokens and LP tokens go to your wallet</li>
-                </ol>
-              </div>
-
               <div className="flex gap-2">
                 <button onClick={() => setStep('confirm')} className="btn-outline flex-1 text-center text-sm">Back</button>
                 <button
-                  onClick={() => { setSwapFromMatic(true); execute(true) }}
+                  onClick={() => { setSwapFromNative(true); execute(true) }}
                   className="flex-1 text-center text-sm py-2 rounded-lg font-semibold transition-all"
                   style={{ background: 'rgba(130,71,229,0.2)', border: '1px solid rgba(130,71,229,0.5)', color: '#a78bfa' }}
                 >
-                  Swap MATIC &amp; Invest
+                  Swap {nativeLabel} &amp; Invest
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── Token approvals ──────────────────────────── */}
           {step === 'approving' && (
             <div className="space-y-3">
               <p className="text-sm text-gray-300 font-medium">Token approvals required</p>
@@ -466,7 +457,6 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
             </div>
           )}
 
-          {/* ── Ready to execute ─────────────────────────── */}
           {step === 'ready' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)' }}>
@@ -477,7 +467,7 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
                 <div className="text-dim font-medium mb-1">Multicall3 contract</div>
                 <div className="mono text-gray-400 break-all">0xcA11bde05977b3631167028862bE2a173976CA11</div>
                 <div className="text-dim mt-2">
-                  Calls: <span className="text-gray-200">transferFrom</span> → <span className="text-gray-200">approve</span> → <span className="text-gray-200">supply/addLiquidity</span> (all in one tx, simulated before sending)
+                  Calls: <span className="text-gray-200">transferFrom</span> → <span className="text-gray-200">approve</span> → <span className="text-gray-200">supply/addLiquidity</span>
                 </div>
               </div>
               <button onClick={() => execute(false)} className="btn-primary w-full text-center">
@@ -486,7 +476,6 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
             </div>
           )}
 
-          {/* ── Simulation warning ────────────────────────── */}
           {step === 'simwarn' && (
             <div className="space-y-4">
               <div className="flex gap-2 p-3 rounded-lg" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}>
@@ -496,9 +485,6 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
                   <p className="text-dim break-words">{simWarning}</p>
                 </div>
               </div>
-              <p className="text-xs text-dim">
-                The transaction was simulated against current chain state. A warning doesn't always mean failure — pool ratios can shift between simulation and execution. You may send anyway at your own risk.
-              </p>
               <div className="flex gap-2">
                 <button onClick={() => setStep('ready')} className="btn-outline flex-1 text-sm">Back</button>
                 <button
@@ -512,29 +498,22 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
             </div>
           )}
 
-          {/* ── Signing ──────────────────────────────────── */}
           {step === 'signing' && (
             <div className="py-10 flex flex-col items-center gap-4">
               <Loader2 className="w-8 h-8 text-poly animate-spin" />
               <p className="text-sm text-gray-300">Waiting for MetaMask signature…</p>
-              <p className="text-xs text-dim">
-                {swapFromMatic
-                  ? 'Multicall3 will swap MATIC and deploy funds atomically'
-                  : 'Multicall3 will execute all strategy calls atomically'}
-              </p>
+              <p className="text-xs text-dim">Multicall3 will execute all strategy calls atomically</p>
             </div>
           )}
 
-          {/* ── Done ─────────────────────────────────────── */}
           {step === 'done' && (
             <div className="py-10 flex flex-col items-center gap-4">
               <CheckCircle2 className="w-10 h-10 text-gain" />
               <p className="text-sm font-semibold text-gray-200">Strategy activated!</p>
-              <p className="text-xs text-dim text-center">Transaction submitted to Polygon.</p>
+              <p className="text-xs text-dim text-center">Transaction submitted to {chain}.</p>
             </div>
           )}
 
-          {/* ── Error ────────────────────────────────────── */}
           {step === 'error' && (
             <div className="space-y-4">
               <div className="flex gap-2 p-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
@@ -553,21 +532,21 @@ function PolygonActivateModal({ strategy, wallet, onClose, onActivate }) {
 // ─── Withdrawal Modal ─────────────────────────────────────────────────────
 
 function WithdrawalModal({ strategy, wallet, onClose, onDeactivate }) {
-  const [step,    setStep]    = useState('confirm')
-  const [error,   setError]   = useState(null)
-  const [txHash,  setTxHash]  = useState(null)
+  const [step,   setStep]   = useState('confirm')
+  const [error,  setError]  = useState(null)
+  const [txHash, setTxHash] = useState(null)
 
-  const isTON = strategy.chain === 'TON'
+  const isTON    = strategy.chain === 'TON'
+  const explorer = CHAIN_EXPLORER[strategy.chain]
 
   const execute = useCallback(async () => {
     setStep('withdrawing')
     setError(null)
     try {
       if (isTON) {
-        // TON withdrawal handled by tonSigning.js (future)
         throw new Error('TON withdrawal UI coming soon — use your wallet directly.')
       }
-      const { txHash: hash } = await executeWithdrawal(strategy.id, wallet.address)
+      const { txHash: hash } = await executeEVMWithdrawal(strategy.chain, strategy.id, wallet.address)
       setTxHash(hash)
       setStep('done')
       setTimeout(() => { onDeactivate(strategy.id); onClose() }, 2000)
@@ -575,7 +554,7 @@ function WithdrawalModal({ strategy, wallet, onClose, onDeactivate }) {
       setError(e?.message ?? 'Withdrawal failed')
       setStep('error')
     }
-  }, [strategy.id, wallet.address, isTON, onDeactivate, onClose])
+  }, [strategy.id, strategy.chain, wallet.address, isTON, onDeactivate, onClose])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
@@ -613,15 +592,9 @@ function WithdrawalModal({ strategy, wallet, onClose, onDeactivate }) {
               {isTON && (
                 <div className="flex gap-2 p-3 rounded-lg" style={{ background: 'rgba(0,152,234,0.06)', border: '1px solid rgba(0,152,234,0.2)' }}>
                   <AlertTriangle className="w-4 h-4 text-ton flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-dim">TON liquid staking protocols (Tonstakers, Bemo, Hipo) may have an unbonding period before funds are available.</p>
+                  <p className="text-xs text-dim">TON liquid staking protocols may have an unbonding period before funds are available.</p>
                 </div>
               )}
-
-              <p className="text-xs text-dim">
-                {isTON
-                  ? 'One TON Connect signature sends unstake/burn messages to each protocol.'
-                  : 'One Multicall3 transaction exits AAVE positions and removes liquidity. Simulated before sending.'}
-              </p>
 
               <div className="flex gap-2">
                 <button onClick={onClose} className="btn-outline flex-1 text-sm">Cancel</button>
@@ -648,13 +621,13 @@ function WithdrawalModal({ strategy, wallet, onClose, onDeactivate }) {
             <div className="py-10 flex flex-col items-center gap-4">
               <CheckCircle2 className="w-10 h-10 text-gain" />
               <p className="text-sm font-semibold text-gray-200">Funds returned to wallet</p>
-              {txHash && (
+              {txHash && explorer && (
                 <a
-                  href={`https://polygonscan.com/tx/${txHash}`}
+                  href={`${explorer}/tx/${txHash}`}
                   target="_blank" rel="noreferrer"
                   className="text-xs text-ton flex items-center gap-1"
                 >
-                  View on PolygonScan <ExternalLink className="w-3 h-3" />
+                  View on explorer <ExternalLink className="w-3 h-3" />
                 </a>
               )}
             </div>
@@ -677,11 +650,14 @@ function WithdrawalModal({ strategy, wallet, onClose, onDeactivate }) {
 
 // ─── Strategy Card ────────────────────────────────────────────────────────
 
-function StrategyCard({ s, isActive, wallet, onActivate, onDeactivate, onConnectWallet }) {
-  const [showActivate,  setShowActivate]  = useState(false)
-  const [showWithdraw,  setShowWithdraw]  = useState(false)
+function StrategyCard({ s, isActive, tonWallet, evmWallet, onActivate, onDeactivate, onConnectTon, onConnectEVM }) {
+  const [showActivate, setShowActivate] = useState(false)
+  const [showWithdraw, setShowWithdraw] = useState(false)
   const { icon: Icon, pillClass } = TIER_META[s.tier] || {}
-  const isTON = s.chain === 'TON'
+  const isTON  = s.chain === 'TON'
+  const wallet = isTON ? tonWallet : evmWallet
+
+  const chainColor = CHAIN_TABS.find(c => c.id === s.chain)?.color ?? '#8247e5'
 
   return (
     <>
@@ -723,17 +699,16 @@ function StrategyCard({ s, isActive, wallet, onActivate, onDeactivate, onConnect
             <span className="text-dim">Liquidation</span>
             <span className={s.liquidationRisk ? 'text-danger' : 'text-gain'}>{s.liquidationRisk ? 'Possible' : 'No'}</span>
           </div>
-          {s.txMessages && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-dim">Tx msgs</span>
-              <span className="text-gray-400">{s.txMessages}</span>
-            </div>
-          )}
         </div>
 
         <div className="flex gap-1.5 flex-wrap">
           {s.protocols.map(p => <span key={p} className="pill pill-gray">{p}</span>)}
-          <span className={`pill ${isTON ? 'pill-ton' : 'pill-poly'}`}>{s.chain}</span>
+          <span
+            className="pill"
+            style={{ background: `${chainColor}20`, border: `1px solid ${chainColor}50`, color: chainColor }}
+          >
+            {s.chain}
+          </span>
         </div>
 
         {isActive ? (
@@ -744,7 +719,7 @@ function StrategyCard({ s, isActive, wallet, onActivate, onDeactivate, onConnect
           >
             Deactivate &amp; Withdraw
           </button>
-        ) : wallet.connected && wallet.chain === s.chain ? (
+        ) : wallet.connected ? (
           <button
             onClick={() => setShowActivate(true)}
             className="w-full text-center text-sm py-2 rounded-lg font-semibold transition-all mt-auto"
@@ -755,8 +730,11 @@ function StrategyCard({ s, isActive, wallet, onActivate, onDeactivate, onConnect
             Activate Strategy
           </button>
         ) : (
-          <button onClick={onConnectWallet} className="btn-outline w-full text-center text-sm mt-auto">
-            Connect {s.chain} Wallet
+          <button
+            onClick={isTON ? onConnectTon : onConnectEVM}
+            className="btn-outline w-full text-center text-sm mt-auto"
+          >
+            Connect {isTON ? 'TON' : 'EVM'} Wallet
           </button>
         )}
       </div>
@@ -768,8 +746,8 @@ function StrategyCard({ s, isActive, wallet, onActivate, onDeactivate, onConnect
               onClose={() => setShowActivate(false)}
               onActivate={onActivate}
             />
-          : <PolygonActivateModal
-              strategy={s} wallet={wallet}
+          : <EvmActivateModal
+              strategy={s} wallet={wallet} chain={s.chain}
               onClose={() => setShowActivate(false)}
               onActivate={onActivate}
             />
@@ -788,13 +766,22 @@ function StrategyCard({ s, isActive, wallet, onActivate, onDeactivate, onConnect
 
 // ─── Page ─────────────────────────────────────────────────────────────────
 
-export default function Strategies({ wallet, activeStrategy, setActiveStrategy, onConnectWallet }) {
+const STRATEGIES_BY_CHAIN = {
+  TON:     TON_STRATEGIES,
+  Polygon: POLYGON_STRATEGIES,
+  Base:    BASE_STRATEGIES,
+  BNB:     BNB_STRATEGIES,
+}
+
+const ALL_STRATEGIES = [...TON_STRATEGIES, ...POLYGON_STRATEGIES, ...BASE_STRATEGIES, ...BNB_STRATEGIES]
+
+export default function Strategies({ tonWallet, evmWallet, activeStrategy, setActiveStrategy, onConnectTon, onConnectEVM }) {
   const [chainTab, setChainTab] = useState('TON')
 
-  const handleDeactivate = (id) => setActiveStrategy(null)
+  const handleDeactivate = () => setActiveStrategy(null)
 
-  const strategies = chainTab === 'TON' ? TON_STRATEGIES : POLYGON_STRATEGIES
-  const activeS    = [...TON_STRATEGIES, ...POLYGON_STRATEGIES].find(s => s.id === activeStrategy)
+  const strategies = STRATEGIES_BY_CHAIN[chainTab] ?? []
+  const activeS    = ALL_STRATEGIES.find(s => s.id === activeStrategy)
 
   return (
     <div className="space-y-5">
@@ -808,28 +795,24 @@ export default function Strategies({ wallet, activeStrategy, setActiveStrategy, 
         </div>
       )}
 
-      <div className="flex gap-2">
-        {['TON', 'Polygon'].map(c => (
+      <div className="flex gap-2 flex-wrap">
+        {CHAIN_TABS.map(({ id, label, color, bg }) => (
           <button
-            key={c}
-            onClick={() => setChainTab(c)}
+            key={id}
+            onClick={() => setChainTab(id)}
             className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
             style={{
-              background: chainTab === c ? (c === 'TON' ? 'rgba(0,152,234,0.2)' : 'rgba(130,71,229,0.2)') : '#1a2235',
-              border: `1px solid ${chainTab === c ? (c === 'TON' ? '#0098ea' : '#8247e5') : '#2a3a55'}`,
-              color: chainTab === c ? (c === 'TON' ? '#0098ea' : '#8247e5') : '#8b9dc3',
+              background: chainTab === id ? bg : '#1a2235',
+              border: `1px solid ${chainTab === id ? color : '#2a3a55'}`,
+              color: chainTab === id ? color : '#8b9dc3',
             }}
           >
-            {c === 'TON' ? 'TON Network' : 'Polygon'}
+            {label}
           </button>
         ))}
       </div>
 
-      <div className="text-xs text-dim px-1">
-        {chainTab === 'TON'
-          ? 'Strategies use on-chain contracts: STON.fi v2.1 router · DeDust factory · Tonstakers/Bemo/Hipo pools · Evaa lending. One TON Connect signature per activation.'
-          : 'Strategies use AAVE v3 pool · QuickSwap v2 router · Balancer vault. Tokens are approved to Multicall3 which pulls, re-approves protocols, and deposits — all in one transaction.'}
-      </div>
+      <div className="text-xs text-dim px-1">{CHAIN_DESCS[chainTab]}</div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {strategies.map(s => (
@@ -837,10 +820,12 @@ export default function Strategies({ wallet, activeStrategy, setActiveStrategy, 
             key={s.id}
             s={s}
             isActive={activeStrategy === s.id}
-            wallet={wallet}
+            tonWallet={tonWallet}
+            evmWallet={evmWallet}
             onActivate={setActiveStrategy}
             onDeactivate={handleDeactivate}
-            onConnectWallet={onConnectWallet}
+            onConnectTon={onConnectTon}
+            onConnectEVM={onConnectEVM}
           />
         ))}
       </div>

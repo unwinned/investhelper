@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react'
 import { Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { POOLS } from '../data.js'
 
-const CHAIN_OPTS = ['All', 'TON', 'Polygon']
-const DEX_OPTS   = ['All', 'STON.fi', 'DeDust', 'Uniswap v3', 'QuickSwap', 'Balancer']
+const CHAIN_OPTS = ['All', 'TON', 'Polygon', 'Base', 'BNB']
+const DEX_OPTS   = ['All', 'STON.fi', 'DeDust', 'Uniswap v3', 'QuickSwap', 'Balancer', 'Aerodrome', 'PancakeSwap']
 const APY_OPTS   = [
   { label: 'Any APY',  min: 0   },
   { label: '>5%',      min: 5   },

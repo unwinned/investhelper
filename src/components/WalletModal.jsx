@@ -1,26 +1,43 @@
 import { useState } from 'react'
-import { X, Loader2, AlertCircle } from 'lucide-react'
+import { X, Loader2, AlertCircle, CheckCircle2, Copy, LogOut, Wallet } from 'lucide-react'
 
-export default function WalletModal({ onClose, openTonModal, connectMetaMask, onConnected }) {
-  const [connecting, setConnecting] = useState(null)
-  const [error, setError] = useState(null)
+function truncate(addr) {
+  if (!addr) return ''
+  return `${addr.slice(0, 8)}…${addr.slice(-6)}`
+}
 
-  const handleTON = () => {
-    openTonModal()   // opens TonConnect's own modal (QR / deep link / extension)
-    // onClose is already called in App.jsx via the openTonModal wrapper
+export default function WalletModal({
+  onClose,
+  tonWallet, evmWallet,
+  onConnectTon, onConnectEVM,
+  onDisconnectTon, onDisconnectEVM,
+}) {
+  const [connecting,  setConnecting]  = useState(null)
+  const [error,       setError]       = useState(null)
+  const [copiedTon,   setCopiedTon]   = useState(false)
+  const [copiedEVM,   setCopiedEVM]   = useState(false)
+
+  const handleConnectTon = () => {
+    onConnectTon()
+    onClose()
   }
 
-  const handleMetaMask = async () => {
-    setConnecting('MetaMask')
+  const handleConnectEVM = async () => {
+    setConnecting('evm')
     setError(null)
     try {
-      await connectMetaMask()
-      onConnected()
+      await onConnectEVM()
     } catch (e) {
       setError(e.message)
     } finally {
       setConnecting(null)
     }
+  }
+
+  const copy = (addr, setter) => {
+    navigator.clipboard.writeText(addr)
+    setter(true)
+    setTimeout(() => setter(false), 1500)
   }
 
   return (
@@ -29,15 +46,17 @@ export default function WalletModal({ onClose, openTonModal, connectMetaMask, on
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
     >
       <div className="relative w-full max-w-sm rounded-2xl" style={{ background: '#111827', border: '1px solid #1e293b' }}>
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: '#1e293b' }}>
-          <h2 className="font-semibold text-white">Connect Wallet</h2>
+          <div className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-dim" />
+            <h2 className="font-semibold text-white">Wallets</h2>
+          </div>
           <button onClick={onClose} className="text-dim hover:text-white transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-5 space-y-3">
           {error && (
             <div className="flex items-start gap-2 p-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
               <AlertCircle className="w-4 h-4 text-danger flex-shrink-0 mt-0.5" />
@@ -45,51 +64,115 @@ export default function WalletModal({ onClose, openTonModal, connectMetaMask, on
             </div>
           )}
 
-          {/* TON */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="pill pill-ton">TON</span>
-              <span className="text-xs text-dim">TON Connect 2.0</span>
+          {/* ── TON ─────────────────────────────────────────── */}
+          <div className="rounded-xl p-4 space-y-3" style={{ background: '#0d1526', border: '1px solid #1e293b' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="pill pill-ton text-xs">TON</span>
+                <span className="text-xs text-dim">TON Connect 2.0</span>
+              </div>
+              {tonWallet.connected && (
+                <span className="flex items-center gap-1 text-xs text-gain">
+                  <CheckCircle2 className="w-3 h-3" /> Connected
+                </span>
+              )}
             </div>
-            <button
-              onClick={handleTON}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-sm font-medium text-gray-200"
-              style={{ background: '#1a2235', border: '1px solid #2a3a55' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,152,234,0.5)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a3a55' }}
-            >
-              <span>Connect TON Wallet</span>
-              <span className="text-xs text-dim">Tonkeeper · MyTonWallet · OpenMask…</span>
-            </button>
-            <p className="text-xs text-dim mt-1.5 px-1">Opens TonConnect modal — scan QR or use browser extension.</p>
+
+            {tonWallet.connected ? (
+              <>
+                <div className="text-xs font-mono text-gray-400 px-1 break-all">{tonWallet.address}</div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => copy(tonWallet.address, setCopiedTon)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: 'rgba(0,152,234,0.1)', border: '1px solid rgba(0,152,234,0.2)', color: '#0098ea' }}
+                  >
+                    <Copy className="w-3 h-3" />
+                    {copiedTon ? 'Copied!' : 'Copy'}
+                  </button>
+                  <button
+                    onClick={() => { onDisconnectTon(); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}
+                  >
+                    <LogOut className="w-3 h-3" />
+                    Disconnect
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleConnectTon}
+                  className="w-full py-2.5 rounded-xl text-sm font-medium transition-all"
+                  style={{ background: 'rgba(0,152,234,0.12)', border: '1px solid rgba(0,152,234,0.3)', color: '#0098ea' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,152,234,0.2)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,152,234,0.12)' }}
+                >
+                  Connect TON Wallet
+                </button>
+                <p className="text-xs text-dim text-center">Scan QR with Tonkeeper, MyTonWallet, or use browser extension</p>
+              </>
+            )}
           </div>
 
-          <div className="border-t" style={{ borderColor: '#1e293b' }} />
-
-          {/* Polygon */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="pill pill-poly">POLYGON</span>
-              <span className="text-xs text-dim">WalletConnect v2</span>
+          {/* ── EVM (Polygon / Base / BNB) ────────────────────── */}
+          <div className="rounded-xl p-4 space-y-3" style={{ background: '#0d1526', border: '1px solid #1e293b' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="pill pill-poly text-xs">EVM</span>
+                <span className="text-xs text-dim">MetaMask · Polygon / Base / BNB</span>
+              </div>
+              {evmWallet.connected && (
+                <span className="flex items-center gap-1 text-xs text-gain">
+                  <CheckCircle2 className="w-3 h-3" /> Connected
+                </span>
+              )}
             </div>
-            <button
-              onClick={handleMetaMask}
-              disabled={connecting === 'MetaMask'}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-sm font-medium text-gray-200 disabled:opacity-50"
-              style={{ background: '#1a2235', border: '1px solid #2a3a55' }}
-              onMouseEnter={e => { if (!connecting) e.currentTarget.style.borderColor = 'rgba(130,71,229,0.5)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a3a55' }}
-            >
-              <span>MetaMask</span>
-              {connecting === 'MetaMask'
-                ? <Loader2 className="w-4 h-4 text-poly animate-spin" />
-                : <span className="text-xs text-dim">window.ethereum</span>}
-            </button>
+
+            {evmWallet.connected ? (
+              <>
+                <div className="text-xs font-mono text-gray-400 px-1 break-all">{evmWallet.address}</div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => copy(evmWallet.address, setCopiedEVM)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: 'rgba(130,71,229,0.1)', border: '1px solid rgba(130,71,229,0.2)', color: '#8247e5' }}
+                  >
+                    <Copy className="w-3 h-3" />
+                    {copiedEVM ? 'Copied!' : 'Copy'}
+                  </button>
+                  <button
+                    onClick={() => { onDisconnectEVM(); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}
+                  >
+                    <LogOut className="w-3 h-3" />
+                    Disconnect
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleConnectEVM}
+                  disabled={connecting === 'evm'}
+                  className="w-full py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ background: 'rgba(130,71,229,0.12)', border: '1px solid rgba(130,71,229,0.3)', color: '#8247e5' }}
+                  onMouseEnter={e => { if (!connecting) e.currentTarget.style.background = 'rgba(130,71,229,0.2)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(130,71,229,0.12)' }}
+                >
+                  {connecting === 'evm' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Connect MetaMask
+                </button>
+                <p className="text-xs text-dim text-center">Works on Polygon, Base, and BNB Chain automatically</p>
+              </>
+            )}
           </div>
         </div>
 
         <div className="px-5 pb-5">
-          <p className="text-xs text-dim text-center">Non-custodial · Your keys stay in your wallet</p>
+          <p className="text-xs text-dim text-center">Non-custodial · Both wallets can be active simultaneously</p>
         </div>
       </div>
     </div>

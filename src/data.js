@@ -34,6 +34,24 @@ export const POOLS = [
   { id: 28, pair: 'stMATIC/MATIC',  chain: 'Polygon', dex: 'Balancer',  apy: 7.8,   tvl: 34200000,  vol24h: 2900000,  ilRisk: 'Low'      },
   { id: 29, pair: 'USDC/USDT/DAI',  chain: 'Polygon', dex: 'Balancer',  apy: 4.1,   tvl: 98700000,  vol24h: 15600000, ilRisk: 'None'     },
   { id: 30, pair: 'BAL/WETH',       chain: 'Polygon', dex: 'Balancer',  apy: 28.4,  tvl: 8300000,   vol24h: 2100000,  ilRisk: 'High'     },
+  // Base — Aerodrome
+  { id: 31, pair: 'WETH/USDC',     chain: 'Base',    dex: 'Aerodrome', apy: 14.2,  tvl: 112400000, vol24h: 18700000, ilRisk: 'Medium'   },
+  { id: 32, pair: 'cbETH/WETH',    chain: 'Base',    dex: 'Aerodrome', apy: 7.3,   tvl: 78200000,  vol24h: 8900000,  ilRisk: 'Low'      },
+  { id: 33, pair: 'USDC/USDbC',    chain: 'Base',    dex: 'Aerodrome', apy: 5.1,   tvl: 198400000, vol24h: 24100000, ilRisk: 'None'     },
+  { id: 34, pair: 'WETH/AERO',     chain: 'Base',    dex: 'Aerodrome', apy: 38.7,  tvl: 24300000,  vol24h: 5400000,  ilRisk: 'High'     },
+  { id: 35, pair: 'cbBTC/WETH',    chain: 'Base',    dex: 'Aerodrome', apy: 9.8,   tvl: 45100000,  vol24h: 7200000,  ilRisk: 'Medium'   },
+  { id: 36, pair: 'USDC/DAI',      chain: 'Base',    dex: 'Aerodrome', apy: 4.6,   tvl: 67800000,  vol24h: 9800000,  ilRisk: 'None'     },
+  // Base — Uniswap v3
+  { id: 37, pair: 'WETH/USDC',     chain: 'Base',    dex: 'Uniswap v3',apy: 11.8,  tvl: 89200000,  vol24h: 16200000, ilRisk: 'Medium'   },
+  { id: 38, pair: 'cbETH/WETH',    chain: 'Base',    dex: 'Uniswap v3',apy: 6.1,   tvl: 52400000,  vol24h: 6700000,  ilRisk: 'Low'      },
+  // BNB — PancakeSwap
+  { id: 39, pair: 'WBNB/USDT',     chain: 'BNB',     dex: 'PancakeSwap',apy: 19.4, tvl: 134600000, vol24h: 28400000, ilRisk: 'Medium'   },
+  { id: 40, pair: 'BTCB/WBNB',     chain: 'BNB',     dex: 'PancakeSwap',apy: 12.1, tvl: 87400000,  vol24h: 14600000, ilRisk: 'Medium'   },
+  { id: 41, pair: 'ETH/WBNB',      chain: 'BNB',     dex: 'PancakeSwap',apy: 16.8, tvl: 64200000,  vol24h: 11200000, ilRisk: 'Medium'   },
+  { id: 42, pair: 'USDT/USDC',     chain: 'BNB',     dex: 'PancakeSwap',apy: 5.3,  tvl: 213800000, vol24h: 34700000, ilRisk: 'None'     },
+  { id: 43, pair: 'CAKE/WBNB',     chain: 'BNB',     dex: 'PancakeSwap',apy: 44.2, tvl: 31200000,  vol24h: 8900000,  ilRisk: 'High'     },
+  { id: 44, pair: 'BTCB/USDT',     chain: 'BNB',     dex: 'PancakeSwap',apy: 8.7,  tvl: 76400000,  vol24h: 12300000, ilRisk: 'Low'      },
+  { id: 45, pair: 'ETH/USDT',      chain: 'BNB',     dex: 'PancakeSwap',apy: 11.3, tvl: 58700000,  vol24h: 9400000,  ilRisk: 'Medium'   },
 ]
 
 export const LENDING = [
@@ -49,6 +67,17 @@ export const LENDING = [
   { id: 10, protocol: 'Evaa',       chain: 'TON',     asset: 'tgBTC', supplyAPY: 1.43, borrowAPY: 3.82, utilization: 45, tvl: 18700000  },
   { id: 11, protocol: 'Tonstakers', chain: 'TON',     asset: 'TON',   supplyAPY: 5.83, borrowAPY: null, utilization: null, tvl: 234000000 },
   { id: 12, protocol: 'Bemo',       chain: 'TON',     asset: 'TON',   supplyAPY: 6.11, borrowAPY: null, utilization: null, tvl: 178000000 },
+  // Base — AAVE v3
+  { id: 13, protocol: 'AAVE v3',   chain: 'Base',    asset: 'WETH',  supplyAPY: 1.94, borrowAPY: 3.41, utilization: 64, tvl: 312400000 },
+  { id: 14, protocol: 'AAVE v3',   chain: 'Base',    asset: 'USDC',  supplyAPY: 4.87, borrowAPY: 7.12, utilization: 82, tvl: 198700000 },
+  { id: 15, protocol: 'AAVE v3',   chain: 'Base',    asset: 'cbETH', supplyAPY: 1.12, borrowAPY: 2.43, utilization: 51, tvl: 134200000 },
+  { id: 16, protocol: 'AAVE v3',   chain: 'Base',    asset: 'USDbC', supplyAPY: 4.31, borrowAPY: 6.74, utilization: 76, tvl: 87400000  },
+  // BNB — AAVE v3
+  { id: 17, protocol: 'AAVE v3',   chain: 'BNB',     asset: 'USDT',  supplyAPY: 5.21, borrowAPY: 7.84, utilization: 79, tvl: 234100000 },
+  { id: 18, protocol: 'AAVE v3',   chain: 'BNB',     asset: 'USDC',  supplyAPY: 4.93, borrowAPY: 7.41, utilization: 76, tvl: 189300000 },
+  { id: 19, protocol: 'AAVE v3',   chain: 'BNB',     asset: 'WBNB',  supplyAPY: 1.78, borrowAPY: 3.12, utilization: 59, tvl: 156800000 },
+  { id: 20, protocol: 'AAVE v3',   chain: 'BNB',     asset: 'BTCB',  supplyAPY: 0.87, borrowAPY: 2.14, utilization: 44, tvl: 213400000 },
+  { id: 21, protocol: 'AAVE v3',   chain: 'BNB',     asset: 'ETH',   supplyAPY: 1.63, borrowAPY: 3.08, utilization: 57, tvl: 98700000  },
 ]
 
 // Kept for any legacy references — consumers should use TON_STRATEGIES / POLYGON_STRATEGIES
@@ -233,6 +262,177 @@ export const POLYGON_STRATEGIES = [
   },
 ]
 
+// ─── Base Strategies ─────────────────────────────────────────────────────────
+
+export const BASE_STRATEGIES = [
+  {
+    id: 'base-stablecoin-vault',
+    chain: 'Base',
+    tier: 'Super Safe',
+    name: 'Stablecoin Vault',
+    apyMin: 4,
+    apyMax: 7,
+    color: '#00d4aa',
+    riskScore: 1,
+    protocols: ['AAVE v3', 'Aerodrome'],
+    ilRisk: false,
+    liquidationRisk: false,
+    description: 'Stablecoin yield on Base. 60% AAVE v3 USDC supply (~4.9% APY), 15% AAVE v3 USDbC supply (~4.3% APY), 25% Aerodrome USDC/USDbC stable LP (~5.1% APY). Near-zero IL — both assets are USD-pegged. One Multicall3 transaction after approvals.',
+    allocation: [
+      { label: 'AAVE v3 — USDC supply',         pct: 60, color: '#2563eb' },
+      { label: 'AAVE v3 — USDbC supply',         pct: 15, color: '#3b82f6' },
+      { label: 'Aerodrome — USDC/USDbC stable',  pct: 25, color: '#6366f1' },
+    ],
+    approvals: ['USDC → Multicall3', 'USDbC → Multicall3'],
+    gasEstimate: '~0.002 ETH',
+  },
+  {
+    id: 'base-correlated-pairs',
+    chain: 'Base',
+    tier: 'Safe',
+    name: 'Correlated Pairs',
+    apyMin: 6,
+    apyMax: 12,
+    color: '#0098ea',
+    riskScore: 2,
+    protocols: ['AAVE v3', 'Aerodrome'],
+    ilRisk: true,
+    liquidationRisk: false,
+    description: 'ETH-correlated assets for minimal IL. 40% AAVE v3 cbETH supply (~1.1% APY + staking yield), 60% Aerodrome cbETH/WETH volatile LP (~7.3% APY). Both assets track ETH price — IL is minimal as they move together.',
+    allocation: [
+      { label: 'AAVE v3 — cbETH supply',       pct: 40, color: '#2563eb' },
+      { label: 'Aerodrome — cbETH/WETH LP',    pct: 60, color: '#6366f1' },
+    ],
+    approvals: ['cbETH → Multicall3', 'WETH → Multicall3'],
+    gasEstimate: '~0.002 ETH',
+  },
+  {
+    id: 'base-yield-accelerator',
+    chain: 'Base',
+    tier: 'Middle',
+    name: 'Yield Accelerator',
+    apyMin: 12,
+    apyMax: 24,
+    color: '#f97316',
+    riskScore: 3,
+    protocols: ['AAVE v3', 'Aerodrome'],
+    ilRisk: true,
+    liquidationRisk: false,
+    description: 'WETH + USDC split across lending and LP. 20% AAVE v3 WETH supply, 80% Aerodrome WETH/USDC volatile LP (~14.2% APY). Higher IL exposure if ETH diverges from USDC — rebalance recommended if ETH moves >30%.',
+    allocation: [
+      { label: 'AAVE v3 — WETH supply',       pct: 20, color: '#2563eb' },
+      { label: 'Aerodrome — WETH/USDC LP',    pct: 80, color: '#f97316' },
+    ],
+    approvals: ['WETH → Multicall3', 'USDC → Multicall3'],
+    gasEstimate: '~0.002 ETH',
+  },
+  {
+    id: 'base-alpha-hunt',
+    chain: 'Base',
+    tier: 'Alpha Seeker',
+    name: 'Alpha Hunt',
+    apyMin: 25,
+    apyMax: 65,
+    color: '#ef4444',
+    riskScore: 4,
+    protocols: ['AAVE v3', 'Aerodrome'],
+    ilRisk: true,
+    liquidationRisk: true,
+    description: 'AERO governance token exposure for maximum Base yield. 30% AAVE v3 WETH, 70% Aerodrome WETH/AERO LP (~38.7% APY including AERO emissions). AERO token has high volatility — full capital loss is possible if AERO trends to zero.',
+    allocation: [
+      { label: 'AAVE v3 — WETH supply',    pct: 30, color: '#2563eb' },
+      { label: 'Aerodrome — WETH/AERO LP', pct: 70, color: '#ef4444' },
+    ],
+    approvals: ['WETH → Multicall3', 'AERO → Multicall3'],
+    gasEstimate: '~0.002 ETH',
+  },
+]
+
+// ─── BNB Strategies ──────────────────────────────────────────────────────────
+
+export const BNB_STRATEGIES = [
+  {
+    id: 'bnb-stablecoin-vault',
+    chain: 'BNB',
+    tier: 'Super Safe',
+    name: 'Stablecoin Vault',
+    apyMin: 4,
+    apyMax: 8,
+    color: '#00d4aa',
+    riskScore: 1,
+    protocols: ['AAVE v3', 'PancakeSwap'],
+    ilRisk: false,
+    liquidationRisk: false,
+    description: 'Stablecoin yield on BNB Chain. 50% AAVE v3 USDT supply (~5.2% APY), 50% PancakeSwap USDT/USDC LP (~5.3% APY). Near-zero IL — USD-pegged assets. One Multicall3 transaction after approvals.',
+    allocation: [
+      { label: 'AAVE v3 — USDT supply',        pct: 50, color: '#f59e0b' },
+      { label: 'PancakeSwap — USDT/USDC LP',   pct: 50, color: '#d97706' },
+    ],
+    approvals: ['USDT → Multicall3', 'USDC → Multicall3'],
+    gasEstimate: '~0.002 BNB',
+  },
+  {
+    id: 'bnb-correlated-pairs',
+    chain: 'BNB',
+    tier: 'Safe',
+    name: 'Correlated Pairs',
+    apyMin: 7,
+    apyMax: 15,
+    color: '#0098ea',
+    riskScore: 2,
+    protocols: ['AAVE v3', 'PancakeSwap'],
+    ilRisk: true,
+    liquidationRisk: false,
+    description: 'BTC + ETH correlated pair strategy. 30% AAVE v3 BTCB supply (~0.9% APY), 70% PancakeSwap BTCB/ETH LP (~12.1% APY). Both track BTC and ETH respectively — correlated assets keep IL moderate.',
+    allocation: [
+      { label: 'AAVE v3 — BTCB supply',      pct: 30, color: '#f59e0b' },
+      { label: 'PancakeSwap — BTCB/ETH LP',  pct: 70, color: '#d97706' },
+    ],
+    approvals: ['BTCB → Multicall3', 'ETH → Multicall3'],
+    gasEstimate: '~0.002 BNB',
+  },
+  {
+    id: 'bnb-yield-accelerator',
+    chain: 'BNB',
+    tier: 'Middle',
+    name: 'Yield Accelerator',
+    apyMin: 14,
+    apyMax: 28,
+    color: '#f97316',
+    riskScore: 3,
+    protocols: ['AAVE v3', 'PancakeSwap'],
+    ilRisk: true,
+    liquidationRisk: false,
+    description: 'WBNB-centric yield. 40% AAVE v3 WBNB supply (~1.8% APY), 60% PancakeSwap WBNB/USDT LP (~19.4% APY). IL risk if BNB price diverges significantly from USDT.',
+    allocation: [
+      { label: 'AAVE v3 — WBNB supply',        pct: 40, color: '#f59e0b' },
+      { label: 'PancakeSwap — WBNB/USDT LP',   pct: 60, color: '#f97316' },
+    ],
+    approvals: ['WBNB → Multicall3', 'USDT → Multicall3'],
+    gasEstimate: '~0.002 BNB',
+  },
+  {
+    id: 'bnb-alpha-hunt',
+    chain: 'BNB',
+    tier: 'Alpha Seeker',
+    name: 'Alpha Hunt',
+    apyMin: 28,
+    apyMax: 75,
+    color: '#ef4444',
+    riskScore: 4,
+    protocols: ['AAVE v3', 'PancakeSwap'],
+    ilRisk: true,
+    liquidationRisk: true,
+    description: 'CAKE governance token exposure for high BNB Chain yield. 30% AAVE v3 WBNB, 70% PancakeSwap CAKE/WBNB LP (~44.2% APY including CAKE emissions). CAKE price is volatile — high IL risk, partial capital loss possible.',
+    allocation: [
+      { label: 'AAVE v3 — WBNB supply',      pct: 30, color: '#f59e0b' },
+      { label: 'PancakeSwap — CAKE/WBNB LP', pct: 70, color: '#ef4444' },
+    ],
+    approvals: ['WBNB → Multicall3', 'CAKE → Multicall3'],
+    gasEstimate: '~0.002 BNB',
+  },
+]
+
 export const SECURITY_DATA = {
   tonsecStatus: 'Operational',
   vaultHealth: 98.7,
@@ -265,6 +465,8 @@ export const BRIDGE_TOKENS = [
   { symbol: 'WBTC', name: 'Wrapped Bitcoin',decimals: 8  },
   { symbol: 'TON',  name: 'Toncoin',        decimals: 9  },
   { symbol: 'MATIC',name: 'Polygon',        decimals: 18 },
+  { symbol: 'ETH',  name: 'Ether (Base)',   decimals: 18 },
+  { symbol: 'BNB',  name: 'BNB',            decimals: 18 },
 ]
 
 export const PLATFORM_STATS = [

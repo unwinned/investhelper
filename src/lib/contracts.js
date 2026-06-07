@@ -29,6 +29,76 @@ export const TON = {
   HTON:                'EQDPdq8xjAhytYqfGSX8KcFWIReCufsB9Wdg0pLlYSO_h76w',
 }
 
+// ─── Base Mainnet (chainId 8453 / 0x2105) ─────────────────────────────────────
+
+export const BASE = {
+  // AAVE v3
+  AAVE_POOL:              '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5',
+  AAVE_REFERRAL:          0,
+
+  // Aerodrome (Velodrome fork — dominant Base DEX)
+  AERODROME_ROUTER:       '0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43',
+  AERODROME_FACTORY:      '0x420DD381b31aEf6683db6B902084cB0FFECe40Da',
+
+  // Uniswap v3
+  UNI_SWAP_ROUTER:        '0x2626664c2603336E57B271c5C0b26F421741e481',
+  UNI_POSITION_MGR:       '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1',
+
+  // Infrastructure
+  MULTICALL3:             '0xcA11bde05977b3631167028862bE2a173976CA11',
+  MAX_UINT256:            '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+
+  // ERC-20 tokens
+  WETH:                   '0x4200000000000000000000000000000000000006',
+  USDC:                   '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  USDBC:                  '0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA', // bridged USDC
+  CBETH:                  '0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22',
+  CBBTC:                  '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
+  AERO:                   '0x940181a94A35A4569E4529A3CDfB74e38FD98631',
+  DAI:                    '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
+
+  // AAVE v3 aTokens on Base
+  A_USDC:                 '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB',
+  A_USDBC:                '0x0a1d576f3eFeF75b330424287a95A366e8281D54',
+  A_WETH:                 '0xD4a0e0b9149BCee3C920d2E00b5dE09138fd8bb7',
+  A_CBETH:                '0xcf3D55c10DB69a28fD32Ec923d31deafad413DD2',
+}
+
+// ─── BNB Smart Chain (chainId 56 / 0x38) ─────────────────────────────────────
+
+export const BNB = {
+  // AAVE v3
+  AAVE_POOL:              '0x6807dc923806fE8Fd134338EABCA509979a7e0cB',
+  AAVE_REFERRAL:          0,
+
+  // PancakeSwap v2 (dominant DEX on BNB)
+  PANCAKE_ROUTER_V2:      '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+  PANCAKE_FACTORY_V2:     '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73',
+
+  // PancakeSwap v3
+  PANCAKE_ROUTER_V3:      '0x1b81D678ffb9C0263b24A97847620C99d213eB14',
+
+  // Infrastructure
+  MULTICALL3:             '0xcA11bde05977b3631167028862bE2a173976CA11',
+  MAX_UINT256:            '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+
+  // ERC-20 tokens
+  WBNB:                   '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
+  USDC:                   '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
+  USDT:                   '0x55d398326f99059fF775485246999027B3197955',
+  BTCB:                   '0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c',
+  ETH:                    '0x2170Ed0880ac9A755fd29B2688956BD959F933F8',
+  CAKE:                   '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82',
+  DAI:                    '0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3',
+
+  // AAVE v3 aTokens on BNB
+  A_USDC:                 '0x00901a076785e0906d1028c7d6372d247bec7d61',
+  A_USDT:                 '0xa9251ca9DE909CB71783723Aa629949d77Bff3e0',
+  A_ETH:                  '0x9B00a09492a626678e2E96bE2b2F7557aE48f33F',
+  A_WBNB:                 '0x9B00a09492a626678e2E96bE2b2F7557aE48f33F',
+  A_BTCB:                 '0x4197ba364AE6698015AE5c1468f54087602715b2',
+}
+
 // ─── Polygon Mainnet ───────────────────────────────────────────────────────────
 
 export const POLYGON = {

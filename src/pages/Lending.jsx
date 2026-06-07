@@ -3,8 +3,8 @@ import { TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
 import { LENDING } from '../data.js'
 
 const PROTO_OPTS = ['All', 'AAVE v3', 'Evaa', 'Tonstakers', 'Bemo']
-const ASSET_OPTS = ['All', 'USDC', 'USDT', 'WETH', 'WBTC', 'TON', 'MATIC', 'DAI', 'tgBTC']
-const CHAIN_OPTS = ['All', 'TON', 'Polygon']
+const ASSET_OPTS = ['All', 'USDC', 'USDT', 'WETH', 'WBTC', 'TON', 'MATIC', 'DAI', 'tgBTC', 'cbETH', 'USDbC', 'WBNB', 'BTCB', 'ETH']
+const CHAIN_OPTS = ['All', 'TON', 'Polygon', 'Base', 'BNB']
 
 function fmtNum(n) {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`

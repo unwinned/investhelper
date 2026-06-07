@@ -7,5 +7,16 @@ export default defineConfig({
     react(),
     nodePolyfills({ include: ['buffer', 'crypto', 'stream', 'process'] }),
   ],
-  server: { port: 3000, host: true },
+  server: {
+    port: 3000,
+    host: true,
+    proxy: {
+      '/omniston-ws': {
+        target: 'wss://omni-ws.ston.fi',
+        ws: true,
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/omniston-ws/, ''),
+      },
+    },
+  },
 })
