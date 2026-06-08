@@ -1,6 +1,29 @@
 import { beginCell, toNano, Address } from '@ton/core'
 import { TON } from './contracts.js'
 
+// ─── Vault single-tx deposit helpers ─────────────────────────────────────────
+// When IH vault addresses are set, one TON transfer to the vault does everything.
+
+export function buildVaultDeposit(vaultAddress, amountNano) {
+  return {
+    address: vaultAddress,
+    amount:  amountNano.toString(),
+  }
+}
+
+// Empty-body withdrawal message (Tact "Withdraw" struct has no fields in AMM/Liquid)
+export function buildVaultWithdraw(vaultAddress) {
+  const body = beginCell()
+    .storeUint(0, 32)  // Tact text-based op dispatch — empty = Withdraw fallback
+    .storeUint(0, 64)
+    .endCell()
+  return {
+    address: vaultAddress,
+    amount:  toNano('0.1').toString(),
+    payload: body.toBoc().toString('base64'),
+  }
+}
+
 // ─── DeDust op codes (from @dedust/sdk source) ─────────────────────────────
 const DEDUST_NATIVE_DEPOSIT  = 0xd55e4686  // VaultNative.DEPOSIT_LIQUIDITY
 const DEDUST_JETTON_DEPOSIT  = 0x40e108d6  // VaultJetton.DEPOSIT_LIQUIDITY
@@ -280,6 +303,11 @@ export async function buildTonStrategyTx(strategyId, totalNano, userAddress) {
   const messages = []
 
   if (strategyId === 'ton-capital-shield') {
+    // If vault is deployed, one message does 60/40 Tonstakers/Bemo atomically
+    if (TON.IH_CAPITAL_SHIELD_VAULT) {
+      messages.push(buildVaultDeposit(TON.IH_CAPITAL_SHIELD_VAULT, totalNano))
+      return { validUntil: Math.floor(Date.now() / 1000) + 5 * 60, messages }
+    }
     const stakersAmt = totalNano * 60n / 100n
     const bemoAmt    = totalNano - stakersAmt
     messages.push(buildTonstakersDeposit(stakersAmt))
@@ -287,6 +315,10 @@ export async function buildTonStrategyTx(strategyId, totalNano, userAddress) {
   }
 
   else if (strategyId === 'ton-liquid-yield') {
+    if (TON.IH_LIQUID_YIELD_VAULT) {
+      messages.push(buildVaultDeposit(TON.IH_LIQUID_YIELD_VAULT, totalNano))
+      return { validUntil: Math.floor(Date.now() / 1000) + 5 * 60, messages }
+    }
     const hipoAmt  = totalNano * 45n / 100n
     const lpAmt    = totalNano * 35n / 100n
     const evaaAmt  = totalNano - hipoAmt - lpAmt
@@ -311,6 +343,10 @@ export async function buildTonStrategyTx(strategyId, totalNano, userAddress) {
   }
 
   else if (strategyId === 'ton-amm-optimizer') {
+    if (TON.IH_AMM_VAULT) {
+      messages.push(buildVaultDeposit(TON.IH_AMM_VAULT, totalNano))
+      return { validUntil: Math.floor(Date.now() / 1000) + 5 * 60, messages }
+    }
     const stonfiAmt  = totalNano * 50n / 100n
     const dedustAmt  = totalNano - stonfiAmt
 

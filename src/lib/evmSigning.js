@@ -93,6 +93,71 @@ const BALANCER_VAULT_ABI = [
   ], outputs: [] },
 ]
 
+// ─── IHYieldVault ABI (ERC-4626 + native helpers) ────────────────────────────
+
+export const IH_VAULT_ABI = [
+  // 1-signing deposit: send native token, get vault shares
+  { name: 'depositNative',  type: 'function', stateMutability: 'payable',
+    inputs: [], outputs: [{ name: 'shares', type: 'uint256' }] },
+  // 1-signing withdrawal: burn shares, get native token back
+  { name: 'withdrawNative', type: 'function', stateMutability: 'nonpayable',
+    inputs: [{ name: 'shares', type: 'uint256' }], outputs: [{ name: 'nativeOut', type: 'uint256' }] },
+  // ERC-4626 standard reads
+  { name: 'totalAssets',    type: 'function', stateMutability: 'view',
+    inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'totalSupply',    type: 'function', stateMutability: 'view',
+    inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'balanceOf',      type: 'function', stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address' }], outputs: [{ type: 'uint256' }] },
+  { name: 'sharePrice',     type: 'function', stateMutability: 'view',
+    inputs: [], outputs: [{ type: 'uint256' }] },
+  { name: 'positionValue',  type: 'function', stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }], outputs: [{ type: 'uint256' }] },
+]
+
+/**
+ * Execute an IHYieldVault deposit in a single MetaMask confirmation.
+ * @param {string} vaultAddress  - deployed IHBaseVault / IHPolygonVault / IHBNBVault address
+ * @param {string} amountHex     - deposit amount in wei (hex string, e.g. "0xDE0B6B3A7640000" for 1 ETH)
+ * @returns {string} txHash
+ */
+export async function executeVaultDeposit(vaultAddress, amountHex) {
+  const calldata = encodeFunctionData({
+    abi: IH_VAULT_ABI,
+    functionName: 'depositNative',
+    args: [],
+  })
+  const [account] = await window.ethereum.request({ method: 'eth_requestAccounts' })
+  return window.ethereum.request({
+    method: 'eth_sendTransaction',
+    params: [{
+      from:  account,
+      to:    vaultAddress,
+      value: amountHex,
+      data:  calldata,
+    }],
+  })
+}
+
+/**
+ * Execute an IHYieldVault withdrawal in a single MetaMask confirmation.
+ * @param {string} vaultAddress - deployed vault address
+ * @param {bigint} shares       - vault share tokens to burn (from balanceOf)
+ * @returns {string} txHash
+ */
+export async function executeVaultWithdraw(vaultAddress, shares) {
+  const calldata = encodeFunctionData({
+    abi: IH_VAULT_ABI,
+    functionName: 'withdrawNative',
+    args: [shares],
+  })
+  const [account] = await window.ethereum.request({ method: 'eth_requestAccounts' })
+  return window.ethereum.request({
+    method: 'eth_sendTransaction',
+    params: [{ from: account, to: vaultAddress, data: calldata }],
+  })
+}
+
 // Multicall3 aggregate3 (no ETH per-call)
 const AGGREGATE3_ABI = [
   { name: 'aggregate3', type: 'function', inputs: [{ name: 'calls', type: 'tuple[]', components: [
@@ -299,7 +364,7 @@ export async function simulateTx(txParams, userAddress) {
   try {
     await window.ethereum.request({
       method: 'eth_call',
-      params: [{ ...txParams, from: userAddress }, 'latest'],
+      params: [{ ...txParams, from: userAddress, gas: '0x4C4B40' /* 5 M gas */ }, 'latest'],
     })
     return { ok: true }
   } catch (err) {

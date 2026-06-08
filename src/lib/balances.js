@@ -127,16 +127,16 @@ const STRATEGY_TOKEN_REQS = {
   ],
   // ── BNB ──
   'bnb-stablecoin-vault': [
-    { token: BNB.USDT, symbol: 'USDT', decimals: 18, fraction: 0.50 },
-    { token: BNB.USDC, symbol: 'USDC', decimals: 18, fraction: 0.50 },
+    { token: BNB.USDT, symbol: 'USDT', decimals: 18, fraction: 0.75 }, // 50% AAVE + 25% LP
+    { token: BNB.USDC, symbol: 'USDC', decimals: 18, fraction: 0.25 }, // 25% LP
   ],
   'bnb-correlated-pairs': [
     { token: BNB.BTCB, symbol: 'BTCB', decimals: 18, fraction: 0.50 },
     { token: BNB.ETH,  symbol: 'ETH',  decimals: 18, fraction: 0.50 },
   ],
   'bnb-yield-accelerator': [
-    { token: BNB.WBNB, symbol: 'BNB',  decimals: 18, fraction: 0.40 },
-    { token: BNB.USDT, symbol: 'USDT', decimals: 18, fraction: 0.60 },
+    { token: BNB.WBNB, symbol: 'BNB',  decimals: 18, fraction: 0.60 }, // 40% AAVE + 20% LP
+    { token: BNB.USDT, symbol: 'USDT', decimals: 18, fraction: 0.40 }, // 40% LP
   ],
   'bnb-alpha-hunt': [
     { token: BNB.CAKE, symbol: 'CAKE', decimals: 18, fraction: 0.50 },

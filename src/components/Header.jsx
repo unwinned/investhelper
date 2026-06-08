@@ -1,13 +1,10 @@
-import { Layers, TrendingUp, Zap, ArrowLeftRight, Shield, Wallet, ChevronDown, Copy, LogOut } from 'lucide-react'
+import { Layers, TrendingUp, Zap, Shield, Wallet, ChevronDown, Copy, LogOut } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
-import { PLATFORM_STATS } from '../data.js'
-
 const TABS = [
-  { id: 'Pools',      label: 'Pools',      Icon: Layers         },
-  { id: 'Lending',    label: 'Lending',    Icon: TrendingUp     },
-  { id: 'Strategies', label: 'Strategies', Icon: Zap            },
-  { id: 'Bridge',     label: 'Bridge',     Icon: ArrowLeftRight },
-  { id: 'Security',   label: 'Security',   Icon: Shield         },
+  { id: 'Pools',      label: 'Pools',      Icon: Layers     },
+  { id: 'Lending',    label: 'Lending',    Icon: TrendingUp },
+  { id: 'Strategies', label: 'Strategies', Icon: Zap        },
+  { id: 'Security',   label: 'Security',   Icon: Shield     },
 ]
 
 function truncate(addr) {
@@ -99,7 +96,7 @@ function WalletChip({ wallet, onConnect, onDisconnect, accentColor, borderColor,
 
 export default function Header({ tab, setTab, tonWallet, evmWallet, onConnectTon, onConnectEVM, onDisconnectTon, onDisconnectEVM }) {
   return (
-    <header style={{ backgroundColor: '#0d1424', borderBottom: '1px solid #1e293b' }}>
+    <header style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.07)', position: 'sticky', top: 0, zIndex: 40 }}>
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-6">
         {/* Logo */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
@@ -150,22 +147,6 @@ export default function Header({ tab, setTab, tonWallet, evmWallet, onConnectTon
         </div>
       </div>
 
-      {/* Stats bar */}
-      <div
-        className="max-w-7xl mx-auto px-4 h-9 flex items-center gap-6"
-        style={{ borderTop: '1px solid #111e31' }}
-      >
-        <span className="flex items-center gap-1.5 text-xs text-dim">
-          <span className="w-1.5 h-1.5 rounded-full bg-gain animate-pulse" />
-          Live
-        </span>
-        {PLATFORM_STATS.map(({ label, value }) => (
-          <span key={label} className="flex items-center gap-1.5 text-xs">
-            <span className="text-dim">{label}</span>
-            <span className="font-semibold mono" style={{ color: '#e2e8f0' }}>{value}</span>
-          </span>
-        ))}
-      </div>
     </header>
   )
 }

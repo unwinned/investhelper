@@ -27,6 +27,11 @@ export const TON = {
   TSTON:               'EQC98_qAmNEptUtPc7W6xdHh_ZHrBUFpw5Ft_IzNU20QAJav',
   STTON:               'EQDNhy-nxYFgUqzfUzImBEP67JqsyMIcyk2S5_RwNNEYku0k',
   HTON:                'EQDPdq8xjAhytYqfGSX8KcFWIReCufsB9Wdg0pLlYSO_h76w',
+
+  // IH Vault contracts — populate after: cd contracts-ton && npm i && npm run deploy:shield/liquid/amm
+  IH_CAPITAL_SHIELD_VAULT: null,
+  IH_LIQUID_YIELD_VAULT:   null,
+  IH_AMM_VAULT:            null,
 }
 
 // ─── Base Mainnet (chainId 8453 / 0x2105) ─────────────────────────────────────
@@ -62,6 +67,10 @@ export const BASE = {
   A_USDBC:                '0x0a1d576f3eFeF75b330424287a95A366e8281D54',
   A_WETH:                 '0xD4a0e0b9149BCee3C920d2E00b5dE09138fd8bb7',
   A_CBETH:                '0xcf3D55c10DB69a28fD32Ec923d31deafad413DD2',
+
+  // IHBaseVault — ERC-4626, 1-signing deposit (ETH → WETH+USDC → AAVE)
+  // Populate after: cd contracts && npm i && npm run deploy:base
+  IH_VAULT:               null,
 }
 
 // ─── BNB Smart Chain (chainId 56 / 0x38) ─────────────────────────────────────
@@ -97,6 +106,10 @@ export const BNB = {
   A_ETH:                  '0x9B00a09492a626678e2E96bE2b2F7557aE48f33F',
   A_WBNB:                 '0x9B00a09492a626678e2E96bE2b2F7557aE48f33F',
   A_BTCB:                 '0x4197ba364AE6698015AE5c1468f54087602715b2',
+
+  // IHBNBVault — ERC-4626, 1-signing deposit (BNB → WBNB+USDT → AAVE)
+  // Populate after: cd contracts && npm i && npm run deploy:bnb
+  IH_VAULT:               null,
 }
 
 // ─── Polygon Mainnet ───────────────────────────────────────────────────────────
@@ -141,4 +154,8 @@ export const POLYGON = {
   A_USDT:              '0x6ab707Aca953eDAeFBc4fD23bA73294241490620',
   A_WETH:              '0xe50fA9b3c56FfB159cB0FCA61F5c9D750e8128c5',
   A_WBTC:              '0x078f358208685046a11C85e8ad32895DED33A249',
+
+  // IHPolygonVault — ERC-4626, 1-signing deposit (MATIC → WMATIC+USDC → AAVE)
+  // Populate after: cd contracts && npm i && npm run deploy:polygon
+  IH_VAULT:            null,
 }

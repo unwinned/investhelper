@@ -109,6 +109,7 @@ export const TON_STRATEGIES = [
   },
   {
     id: 'ton-liquid-yield',
+    comingSoon: true,
     chain: 'TON',
     tier: 'Safe',
     name: 'Liquid Yield',
@@ -130,6 +131,7 @@ export const TON_STRATEGIES = [
   },
   {
     id: 'ton-amm-optimizer',
+    comingSoon: true,
     chain: 'TON',
     tier: 'Middle',
     name: 'AMM Optimizer',
@@ -150,6 +152,7 @@ export const TON_STRATEGIES = [
   },
   {
     id: 'ton-alpha-hunt',
+    comingSoon: true,
     chain: 'TON',
     tier: 'Alpha Seeker',
     name: 'Alpha Hunt',
@@ -173,10 +176,35 @@ export const TON_STRATEGIES = [
 
 // ─── Polygon Strategies ──────────────────────────────────────────────────────
 // Each strategy activates via Multicall3 (one eth_sendTransaction after approvals).
+// Strategies with useVault:true use IHPolygonVault.depositNative() — truly 0 approvals.
 
 export const POLYGON_STRATEGIES = [
   {
+    id: 'poly-native-vault',
+    comingSoon: true,
+    chain: 'Polygon',
+    tier: 'Super Safe',
+    name: 'Native Yield Vault',
+    apyMin: 4,
+    apyMax: 8,
+    color: '#00d4aa',
+    riskScore: 1,
+    protocols: ['AAVE v3'],
+    ilRisk: false,
+    liquidationRisk: false,
+    useVault: true,
+    nativeSymbol: 'MATIC',
+    description: 'Deposit native MATIC in one transaction — no approvals, no bridge. The vault wraps MATIC, splits 50% to USDC via Uniswap v3, and supplies both to AAVE v3 on Polygon. Your position is represented by ihPOLY vault shares (ERC-20). Withdraw anytime with a single signature.',
+    allocation: [
+      { label: 'AAVE v3 — WMATIC supply', pct: 50, color: '#8247e5' },
+      { label: 'AAVE v3 — USDC supply',   pct: 50, color: '#00d4aa' },
+    ],
+    txMessages: 1,
+    gasEstimate: '~0.05 MATIC',
+  },
+  {
     id: 'poly-stablecoin-vault',
+    comingSoon: true,
     chain: 'Polygon',
     tier: 'Super Safe',
     name: 'Stablecoin Vault',
@@ -198,6 +226,7 @@ export const POLYGON_STRATEGIES = [
   },
   {
     id: 'poly-correlated-pairs',
+    comingSoon: true,
     chain: 'Polygon',
     tier: 'Safe',
     name: 'Correlated Pairs',
@@ -219,6 +248,7 @@ export const POLYGON_STRATEGIES = [
   },
   {
     id: 'poly-yield-accelerator',
+    comingSoon: true,
     chain: 'Polygon',
     tier: 'Middle',
     name: 'Yield Accelerator',
@@ -240,6 +270,7 @@ export const POLYGON_STRATEGIES = [
   },
   {
     id: 'poly-alpha-hunt',
+    comingSoon: true,
     chain: 'Polygon',
     tier: 'Alpha Seeker',
     name: 'Alpha Hunt',
@@ -266,7 +297,31 @@ export const POLYGON_STRATEGIES = [
 
 export const BASE_STRATEGIES = [
   {
+    id: 'base-native-vault',
+    comingSoon: true,
+    chain: 'Base',
+    tier: 'Super Safe',
+    name: 'Native Yield Vault',
+    apyMin: 5,
+    apyMax: 9,
+    color: '#00d4aa',
+    riskScore: 1,
+    protocols: ['AAVE v3'],
+    ilRisk: false,
+    liquidationRisk: false,
+    useVault: true,
+    nativeSymbol: 'ETH',
+    description: 'Deposit native ETH in one transaction — no approvals, no wrapping step. The vault wraps ETH to WETH, splits 50% to USDC via Uniswap v3 (0.05% pool), and supplies both to AAVE v3 on Base. Your position is represented by ihBASE vault shares (ERC-20). Withdraw anytime with one signature.',
+    allocation: [
+      { label: 'AAVE v3 — WETH supply', pct: 50, color: '#2563eb' },
+      { label: 'AAVE v3 — USDC supply', pct: 50, color: '#00d4aa' },
+    ],
+    txMessages: 1,
+    gasEstimate: '~0.0003 ETH',
+  },
+  {
     id: 'base-stablecoin-vault',
+    comingSoon: true,
     chain: 'Base',
     tier: 'Super Safe',
     name: 'Stablecoin Vault',
@@ -288,6 +343,7 @@ export const BASE_STRATEGIES = [
   },
   {
     id: 'base-correlated-pairs',
+    comingSoon: true,
     chain: 'Base',
     tier: 'Safe',
     name: 'Correlated Pairs',
@@ -308,6 +364,7 @@ export const BASE_STRATEGIES = [
   },
   {
     id: 'base-yield-accelerator',
+    comingSoon: true,
     chain: 'Base',
     tier: 'Middle',
     name: 'Yield Accelerator',
@@ -328,6 +385,7 @@ export const BASE_STRATEGIES = [
   },
   {
     id: 'base-alpha-hunt',
+    comingSoon: true,
     chain: 'Base',
     tier: 'Alpha Seeker',
     name: 'Alpha Hunt',
@@ -352,7 +410,31 @@ export const BASE_STRATEGIES = [
 
 export const BNB_STRATEGIES = [
   {
+    id: 'bnb-native-vault',
+    comingSoon: true,
+    chain: 'BNB',
+    tier: 'Super Safe',
+    name: 'Native Yield Vault',
+    apyMin: 4,
+    apyMax: 8,
+    color: '#00d4aa',
+    riskScore: 1,
+    protocols: ['AAVE v3'],
+    ilRisk: false,
+    liquidationRisk: false,
+    useVault: true,
+    nativeSymbol: 'BNB',
+    description: 'Deposit native BNB in one transaction — no approvals. The vault wraps BNB to WBNB, splits 50% to USDT via PancakeSwap v3, and supplies both to AAVE v3 on BNB Chain. Your position is represented by ihBNB vault shares (ERC-20). Withdraw anytime with one signature.',
+    allocation: [
+      { label: 'AAVE v3 — WBNB supply', pct: 50, color: '#f59e0b' },
+      { label: 'AAVE v3 — USDT supply', pct: 50, color: '#00d4aa' },
+    ],
+    txMessages: 1,
+    gasEstimate: '~0.001 BNB',
+  },
+  {
     id: 'bnb-stablecoin-vault',
+    comingSoon: true,
     chain: 'BNB',
     tier: 'Super Safe',
     name: 'Stablecoin Vault',
@@ -373,6 +455,7 @@ export const BNB_STRATEGIES = [
   },
   {
     id: 'bnb-correlated-pairs',
+    comingSoon: true,
     chain: 'BNB',
     tier: 'Safe',
     name: 'Correlated Pairs',
@@ -393,6 +476,7 @@ export const BNB_STRATEGIES = [
   },
   {
     id: 'bnb-yield-accelerator',
+    comingSoon: true,
     chain: 'BNB',
     tier: 'Middle',
     name: 'Yield Accelerator',
@@ -413,6 +497,7 @@ export const BNB_STRATEGIES = [
   },
   {
     id: 'bnb-alpha-hunt',
+    comingSoon: true,
     chain: 'BNB',
     tier: 'Alpha Seeker',
     name: 'Alpha Hunt',

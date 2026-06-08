@@ -1,0 +1,11 @@
+import { Config } from '@ton/blueprint'
+
+export const config: Config = {
+  network: {
+    endpoint: 'https://toncenter.com/api/v2/jsonRPC',
+    type: 'mainnet',
+    version: 'v2',
+    // API key from https://t.me/tonapibot — set TONCENTER_API_KEY in env
+    key: process.env.TONCENTER_API_KEY,
+  },
+}

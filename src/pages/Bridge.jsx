@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { ArrowLeftRight, Clock, CheckCircle2, Loader2, Info, AlertCircle, Zap, Wifi, WifiOff, ExternalLink } from 'lucide-react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { ArrowLeftRight, ArrowLeft, Clock, CheckCircle2, Loader2, Info, AlertCircle, Zap, Wifi, WifiOff, ExternalLink, ChevronDown, RefreshCw } from 'lucide-react'
 import { useRfq, useConnectionStatus } from '@ston-fi/omniston-sdk-react'
 import { useTonConnectUI } from '@tonconnect/ui-react'
 import { buildAssetId, DECIMALS, formatUnits, omniston } from '../lib/omniston.js'
@@ -15,7 +15,8 @@ const SUPPORTED = {
   BNB:     ['BNB', 'USDC', 'USDT', 'ETH', 'BTCB'],
 }
 
-const ALL_CHAINS = ['TON', 'Polygon', 'Base', 'BNB']
+const ALL_CHAINS  = ['TON', 'Polygon', 'Base', 'BNB']
+const EVM_CHAINS  = ['Polygon', 'Base', 'BNB']
 
 // Omniston chain case name per chain
 const OMNISTON_CHAIN_CASE = {
@@ -57,11 +58,34 @@ const TON_JETTONS = {
 
 const NATIVE_TOKENS = { TON: 'TON', Polygon: 'MATIC', Base: 'ETH', BNB: 'BNB' }
 
+// BNB chain pegged stablecoins use 18 decimals, not 6
+const EVM_DECIMALS = {
+  BNB: { USDC: 18, USDT: 18 },
+}
+function evmDecimals(chain, symbol) {
+  return EVM_DECIMALS[chain]?.[symbol] ?? DECIMALS[symbol] ?? 18
+}
+
 const CHAIN_COLOR = {
   TON:     '#0098ea',
   Polygon: '#8247e5',
   Base:    '#2563eb',
   BNB:     '#f59e0b',
+}
+
+// Per-token accent color + display name
+const TOKEN_META = {
+  TON:   { color: '#0098ea', name: 'Toncoin'         },
+  USDC:  { color: '#2775ca', name: 'USD Coin'         },
+  USDT:  { color: '#26a17b', name: 'Tether USD'       },
+  WETH:  { color: '#627eea', name: 'Wrapped ETH'      },
+  ETH:   { color: '#627eea', name: 'Ether'            },
+  WBTC:  { color: '#f7931a', name: 'Wrapped BTC'      },
+  BTCB:  { color: '#f7931a', name: 'BTC (BNB)'        },
+  CBBTC: { color: '#f7931a', name: 'Coinbase BTC'     },
+  MATIC: { color: '#8247e5', name: 'Polygon'          },
+  BNB:   { color: '#f59e0b', name: 'BNB'              },
+  CBETH: { color: '#4ade80', name: 'Coinbase ETH'     },
 }
 
 async function fetchTonBalance(address, token) {
@@ -98,36 +122,125 @@ async function fetchEVMBalance(chain, address, token) {
     if (!tokenAddr) return null
     const data = '0x70a08231' + address.slice(2).padStart(64, '0')
     const res = await window.ethereum.request({ method: 'eth_call', params: [{ to: tokenAddr, data }, 'latest'] })
-    const decimals = DECIMALS[token] ?? 6
+    const decimals = evmDecimals(chain, token)
     return Number(BigInt(res)) / 10 ** decimals
   } catch {
     return null
   }
 }
 
-function ConnectionBadge({ status }) {
-  if (status === 'connected')
-    return <span className="flex items-center gap-1 text-xs text-gain"><Wifi className="w-3 h-3" />Omniston connected</span>
-  if (status === 'connecting')
-    return <span className="flex items-center gap-1 text-xs text-warn"><Loader2 className="w-3 h-3 animate-spin" />Connecting…</span>
-  return <span className="flex items-center gap-1 text-xs text-danger"><WifiOff className="w-3 h-3" />Omniston offline</span>
+// Styled token picker — replaces the ugly native <select>
+function TokenPicker({ value, options, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref             = useRef(null)
+  const meta            = TOKEN_META[value] ?? { color: '#8b9dc3', name: value }
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all"
+        style={{
+          background: `${meta.color}12`,
+          border: `1px solid ${open ? meta.color + '80' : meta.color + '35'}`,
+          color: meta.color,
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold"
+            style={{ background: meta.color, fontSize: '8px' }}
+          >
+            {value.slice(0, 2)}
+          </span>
+          <span>{value}</span>
+          <span className="text-xs font-normal" style={{ color: meta.color + 'aa' }}>{meta.name}</span>
+        </div>
+        <ChevronDown
+          className="w-3.5 h-3.5 flex-shrink-0 transition-transform"
+          style={{ transform: open ? 'rotate(180deg)' : 'none', color: meta.color + '99' }}
+        />
+      </button>
+
+      {open && (
+        <div
+          className="absolute z-50 left-0 right-0 mt-1 rounded-xl overflow-hidden"
+          style={{ background: '#0d1929', border: '1px solid #1e2d45', boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}
+        >
+          {options.map(sym => {
+            const m       = TOKEN_META[sym] ?? { color: '#8b9dc3', name: sym }
+            const isActive = sym === value
+            return (
+              <button
+                key={sym}
+                type="button"
+                onClick={() => { onChange(sym); setOpen(false) }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-all"
+                style={{
+                  background: isActive ? `${m.color}18` : 'transparent',
+                  borderLeft: isActive ? `2px solid ${m.color}` : '2px solid transparent',
+                  color: isActive ? m.color : '#e2e8f0',
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = `${m.color}0d` }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+              >
+                <span
+                  className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold"
+                  style={{ background: m.color, fontSize: '8px' }}
+                >
+                  {sym.slice(0, 2)}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold leading-none" style={{ color: isActive ? m.color : '#e2e8f0' }}>{sym}</div>
+                  <div className="text-xs mt-0.5" style={{ color: '#4a5e7a' }}>{m.name}</div>
+                </div>
+                {isActive && <span className="text-xs font-medium" style={{ color: m.color }}>✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
-function ChainSelect({ label, value, onChange, exclude }) {
+function ConnectionBadge({ status }) {
+  if (status === 'connected')
+    return <span className="flex items-center gap-1 text-xs" style={{ color: '#00d4aa' }}><Wifi className="w-3 h-3" />Live</span>
+  if (status === 'connecting' || status === 'ready')
+    return <span className="flex items-center gap-1 text-xs" style={{ color: '#f59e0b' }}><Loader2 className="w-3 h-3 animate-spin" />Connecting…</span>
+  return <span className="flex items-center gap-1 text-xs" style={{ color: '#ef4444' }}><WifiOff className="w-3 h-3" />Offline</span>
+}
+
+function ChainSelect({ label, value, onChange, options }) {
   const color = CHAIN_COLOR[value] ?? '#8b9dc3'
+  const isLocked = options.length === 1
   return (
     <div className="flex-1 rounded-xl p-3 flex flex-col gap-1.5" style={{ background: `${color}10`, border: `1px solid ${color}30` }}>
       <span className="text-xs text-dim">{label}</span>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="bg-transparent font-semibold text-white text-sm outline-none cursor-pointer"
-        style={{ color }}
-      >
-        {ALL_CHAINS.filter(c => c !== exclude).map(c => (
-          <option key={c} value={c} style={{ background: '#111827', color: '#e2e8f0' }}>{c}</option>
-        ))}
-      </select>
+      {isLocked ? (
+        <span className="font-semibold text-sm" style={{ color }}>{value}</span>
+      ) : (
+        <select
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="bg-transparent font-semibold text-white text-sm outline-none cursor-pointer"
+          style={{ color }}
+        >
+          {options.map(c => (
+            <option key={c} value={c} style={{ background: '#111827', color: '#e2e8f0' }}>{c}</option>
+          ))}
+        </select>
+      )}
       <span className="text-xs text-dim">{value === 'TON' ? 'TON Connect 2.0' : 'MetaMask'}</span>
     </div>
   )
@@ -196,7 +309,7 @@ function QuotePanel({ quoteData, quoteLoading, token, fromChain, toChain, inputA
   return null
 }
 
-export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
+export default function Bridge({ tonWallet, evmWallet, onOpenWallets, onBack }) {
   const connectionStatus = useConnectionStatus()
   const [tonConnectUI] = useTonConnectUI()
 
@@ -214,6 +327,12 @@ export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
   const isFromTON = fromChain === 'TON'
   const sourceWallet = isFromTON ? tonWallet : evmWallet
   const destWallet   = isFromTON ? evmWallet : tonWallet
+
+  // Eagerly open the Omniston WebSocket so connectionStatus reaches 'connected'
+  // before the user types — avoids the 'ready' → never-connects deadlock.
+  useEffect(() => {
+    omniston.transport.connect()
+  }, [])
 
   // Debounce amount
   useEffect(() => {
@@ -233,10 +352,11 @@ export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
     return () => { cancelled = true }
   }, [fromChain, token, sourceWallet?.address, sourceWallet?.connected, isFromTON])
 
-  // Reset token when chain changes
+  // Omniston only supports TON ↔ EVM — enforce one side is always TON
   const handleSetFromChain = (c) => {
     setFromChain(c)
-    if (c === toChain) setToChain(c === 'TON' ? 'Polygon' : 'TON')
+    if (c !== 'TON') setToChain('TON')
+    else if (toChain === 'TON') setToChain('Polygon')
     setToken(SUPPORTED[c]?.[0] ?? 'USDC')
     setAmount('')
     setBalance(null)
@@ -244,23 +364,40 @@ export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
 
   const handleSetToChain = (c) => {
     setToChain(c)
-    if (c === fromChain) setFromChain(c === 'TON' ? 'Polygon' : 'TON')
+    if (c !== 'TON') {
+      setFromChain('TON')
+      setToken(SUPPORTED['TON']?.[0] ?? 'USDC')
+      setAmount('')
+      setBalance(null)
+    }
   }
 
-  // Build QuoteRequest
+  // Build QuoteRequest — must include settlementParams (required by SDK v0.8.x)
   const quoteRequest = useMemo(() => {
     const parsedAmt = parseFloat(debouncedAmount)
     if (!parsedAmt || parsedAmt <= 0) return null
     const inputAsset  = buildAssetId(fromChain, token)
     const outputAsset = buildAssetId(toChain,   token)
     if (!inputAsset || !outputAsset) return null
-    const decimals   = DECIMALS[token] ?? 6
+    const decimals   = isFromTON ? (DECIMALS[token] ?? 9) : evmDecimals(fromChain, token)
     const inputUnits = BigInt(Math.round(parsedAmt * 10 ** decimals)).toString()
-    return { inputAsset, outputAsset, amount: { $case: 'inputUnits', value: inputUnits } }
+    return {
+      inputAsset,
+      outputAsset,
+      amount: { $case: 'inputUnits', value: inputUnits },
+      // Allow both settlement types so resolvers can pick the best route:
+      // swap = TON-only atomic swap, order = cross-chain HTLC escrow
+      settlementParams: [
+        { params: { $case: 'swap',  value: {} } },
+        { params: { $case: 'order', value: {} } },
+      ],
+    }
   }, [fromChain, toChain, token, debouncedAmount])
 
+  // Do NOT gate on connectionStatus === 'connected' — the SDK auto-connects
+  // when requestForQuote is called; gating on 'connected' first creates a deadlock.
   const { data: quoteData, isLoading: quoteLoading } = useRfq(quoteRequest, {
-    enabled: !!quoteRequest && connectionStatus === 'connected',
+    enabled: !!quoteRequest && connectionStatus !== 'error' && connectionStatus !== 'closed',
   })
 
   const swapChains = () => {
@@ -275,7 +412,9 @@ export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
   }
 
   const parsedAmount = parseFloat(amount) || 0
-  const isOffline    = connectionStatus !== 'connected'
+  // 'ready' = not yet connected but will connect when RFQ fires — not truly offline
+  const isOffline    = connectionStatus === 'error' || connectionStatus === 'closed'
+  const isConnecting = connectionStatus === 'ready' || connectionStatus === 'connecting'
   const hasQuote     = quoteData?.$case === 'quoteUpdated'
   const insufficientBalance = balance !== null && parsedAmount > 0 && parsedAmount > balance
   const canBridge = !isOffline && hasQuote && parsedAmount > 0 && sourceWallet?.connected && !insufficientBalance
@@ -418,9 +557,20 @@ export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
 
   return (
     <div className="max-w-xl mx-auto space-y-4">
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm transition-colors"
+          style={{ color: '#4a5e7a' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#e2e8f0'}
+          onMouseLeave={e => e.currentTarget.style.color = '#4a5e7a'}
+        >
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
+      )}
       <div className="card p-5 space-y-5">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-white">Bridge Asset</h2>
+          <h2 className="font-semibold text-white">Cross-chain Swap</h2>
           <div className="flex items-center gap-3">
             <ConnectionBadge status={connectionStatus} />
             <span className="flex items-center gap-1 text-xs text-dim">
@@ -433,16 +583,22 @@ export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
           <>
             {isOffline && (
               <div className="flex items-start gap-2 p-3 rounded-xl text-sm" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                <WifiOff className="w-4 h-4 text-danger flex-shrink-0 mt-0.5" />
+                <WifiOff className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ef4444' }} />
                 <div>
-                  <p className="text-danger font-medium">Bridge unavailable</p>
-                  <p className="text-xs text-dim mt-0.5">Omniston WebSocket is offline. Cross-chain routes require a live connection.</p>
+                  <p className="font-medium" style={{ color: '#ef4444' }}>Bridge unavailable</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#4a5e7a' }}>Omniston WebSocket is unreachable. Try refreshing.</p>
                 </div>
+              </div>
+            )}
+            {isConnecting && !isOffline && (
+              <div className="flex items-center gap-2 p-3 rounded-xl text-sm" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)' }}>
+                <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" style={{ color: '#f59e0b' }} />
+                <p className="text-xs" style={{ color: '#f59e0b' }}>Connecting to Omniston resolver network… quotes will appear shortly</p>
               </div>
             )}
 
             <div className="flex items-center gap-2">
-              <ChainSelect label="From" value={fromChain} onChange={handleSetFromChain} exclude={toChain} />
+              <ChainSelect label="From" value={fromChain} onChange={handleSetFromChain} options={ALL_CHAINS} />
               <button
                 onClick={swapChains}
                 className="w-9 h-9 rounded-lg flex items-center justify-center transition-all flex-shrink-0"
@@ -452,15 +608,18 @@ export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
               >
                 <ArrowLeftRight className="w-4 h-4 text-dim" />
               </button>
-              <ChainSelect label="To" value={toChain} onChange={handleSetToChain} exclude={fromChain} />
+              <ChainSelect
+                label="To"
+                value={toChain}
+                onChange={handleSetToChain}
+                options={isFromTON ? EVM_CHAINS : ['TON']}
+              />
             </div>
 
             <div className="space-y-3">
               <div>
                 <label className="text-xs text-dim block mb-1.5">Asset</label>
-                <select value={token} onChange={e => setToken(e.target.value)} className="input-field w-full">
-                  {bridgeTokens.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <TokenPicker value={token} options={bridgeTokens} onChange={setToken} />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -512,7 +671,22 @@ export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
             {bridgeError && (
               <div className="flex items-start gap-2 p-3 rounded-xl text-xs" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
                 <AlertCircle className="w-3.5 h-3.5 text-danger flex-shrink-0 mt-0.5" />
-                <p className="text-danger">{bridgeError}</p>
+                <div>
+                  <p className="text-danger">
+                    {/Object not found.*quote/i.test(bridgeError)
+                      ? 'Quote expired — a fresh quote is loading automatically. Try again in a moment.'
+                      : bridgeError}
+                  </p>
+                  {/Object not found.*quote/i.test(bridgeError) && (
+                    <button
+                      onClick={() => { setBridgeError(null); setDebouncedAmount(''); setTimeout(() => setDebouncedAmount(amount), 50) }}
+                      className="mt-1.5 flex items-center gap-1 font-medium transition-colors"
+                      style={{ color: '#0098ea' }}
+                    >
+                      <RefreshCw className="w-3 h-3" /> Refresh quote
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -607,10 +781,10 @@ export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
         </h3>
         <div className="grid grid-cols-2 gap-2 text-xs">
           {[
-            ['TON ↔ Polygon', 'USDC, USDT, TON, WETH, WBTC'],
-            ['TON ↔ Base',    'USDC, WETH, ETH, CBETH'],
-            ['TON ↔ BNB',     'USDC, USDT, BNB, ETH, BTCB'],
-            ['EVM ↔ EVM',     'Via TON relay (Polygon, Base, BNB)'],
+            ['TON → Polygon', 'USDC, USDT, WETH, WBTC'],
+            ['TON → Base',    'USDC, WETH, CBETH, CBBTC'],
+            ['TON → BNB',     'USDC, USDT, ETH, BTCB'],
+            ['EVM → TON',     'Any above pair in reverse'],
           ].map(([route, assets]) => (
             <div key={route} className="card-surface p-2.5">
               <div className="font-medium text-gray-300 mb-1">{route}</div>
@@ -618,6 +792,7 @@ export default function Bridge({ tonWallet, evmWallet, onOpenWallets }) {
             </div>
           ))}
         </div>
+        <p className="text-xs text-dim mt-2.5">Omniston routes assets through TON liquidity pools — one side must always be TON.</p>
       </div>
     </div>
   )

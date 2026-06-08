@@ -1,0 +1,22 @@
+{
+  "name": "investhelper-contracts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:base": "hardhat run scripts/deploy-base.js --network base",
+    "deploy:polygon": "hardhat run scripts/deploy-polygon.js --network polygon",
+    "deploy:bnb": "hardhat run scripts/deploy-bnb.js --network bnb",
+    "verify:base": "hardhat verify --network base",
+    "verify:polygon": "hardhat verify --network polygon",
+    "verify:bnb": "hardhat verify --network bnb"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.1.0"
+  }
+}

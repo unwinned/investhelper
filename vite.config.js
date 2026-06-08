@@ -5,7 +5,12 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 export default defineConfig({
   plugins: [
     react(),
-    nodePolyfills({ include: ['buffer', 'crypto', 'stream', 'process'] }),
+    nodePolyfills({
+      include: ['buffer', 'stream', 'process'],
+      // 'crypto' intentionally excluded — the Node polyfill overwrites window.crypto
+      // and removes randomUUID / subtle (Web Crypto API).
+      // @ton/core only needs Buffer; crypto/stream are satisfied by the browser natively.
+    }),
   ],
   server: {
     port: 3000,
